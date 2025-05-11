@@ -1,5 +1,5 @@
 {
-  "spider": "./fty.jar;md5;42ef09340295f4070cedad37bf759ef3",
+  "spider": "./fty.jar;md5;fe5929df64eb2358effeb032359732e5",
   "wallpaper": "https://深色壁纸.xxooo.cf/",
   "sites": [
     {
@@ -706,8 +706,10 @@
     {
       "name": "聚合",
       "type": 0,
-      "url": "./lib/66666.m3u",
-      "playerType": 2
+      "url": "./lib/tv.m3u",
+      "playerType": 2,
+      "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
+      "logo": "https://epg.v1.mk/logo/{name}.png"
     },
     {
       "name": "平台直播",
