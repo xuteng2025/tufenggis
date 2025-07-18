@@ -1,5 +1,5 @@
 {
-  "spider": "./fty.jar;md5;e7c6b481d880ce98ced16bd11d936e71",
+  "spider": "./fty.jar;md5;e875d5382573fcd72aea4c5da44637fe",
   "wallpaper": "https://深色壁纸.xxooo.cf/",
   "sites": [
     {
@@ -317,35 +317,6 @@
       "style": {
         "type": "list"
       }
-    },
-    {
-      "key": "Jrsjs",
-      "name": "⚽ Jrs┃球迷",
-      "type": 3,
-      "api": "./lib/drpy2.min.js",
-      "ext": "./lib/jrk.js",
-      "style": {
-        "type": "list"
-      },
-      "timeout": 10,
-      "searchable": 0,
-      "quickSearch": 0,
-      "changeable": 0
-    },
-    {
-      "key": "酷奇",
-      "name": "🎤酷奇┃MV",
-      "type": 3,
-      "api": "./lib/drpy2.min.js",
-      "ext": "./lib/酷奇MV.js",
-      "style": {
-        "type": "rect",
-        "ratio": 1.597
-      },
-      "timeout": 10,
-      "searchable": 0,
-      "quickSearch": 0,
-      "changeable": 0
     },
     {
       "key": "MTV",
