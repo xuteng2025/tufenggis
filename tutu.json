@@ -647,12 +647,13 @@
   "logo": "https://cdn.wmpvp.com/steamWeb/B96F868DE45B45D690B5F9F490D0BC60-1745866248445.gif",
   "lives": [
     {
-      "name": "IPV4福建IPV6",
+      "name": "V4-mursor（卡顿请换源）",
       "type": 0,
-      "url": "./lib/fj.txt",
-      "playerType": 1,
+      "url": "./lib/iptv.m3u",
+      "playerType": 2,
       "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
-      "logo": "https://epg.v1.mk/logo/{name}.png"
+      "logo": "https://11.112114.xyz/logo/{name}.png",
+      "ua": "okHttp/Mod-1.0.0"
     },
     {
       "name": "V6-范明明（需开启V6网络）",
@@ -662,12 +663,12 @@
       "logo": "https://11.112114.xyz/logo/{name}.png"
     },
     {
-      "name": "牛播一",
+      "name": "IPV4福建IPV6",
       "type": 0,
-      "url": "http://127.0.0.1:9978/proxy?do=饭太硬&type=liveList",
-      "playerType": 2,
+      "url": "./lib/fj.txt",
+      "playerType": 1,
       "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
-      "logo": "https://11.112114.xyz/logo/{name}.png"
+      "logo": "https://epg.v1.mk/logo/{name}.png"
     },
     {
       "name": "平台直播",
