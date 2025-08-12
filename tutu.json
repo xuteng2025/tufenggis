@@ -1,5 +1,5 @@
 {
-  "spider": "./fty.jar;md5;53ad14bb641d6ad5b1a76ea48f35cb7d",
+  "spider": "./fty.jar;md5;c62c307314178af8637480fcb2fe61f7",
   "wallpaper": "https://深色壁纸.xxooo.cf/",
   "sites": [
     {
@@ -48,29 +48,17 @@
       "changeable": 0
     },
     {
-      "key": "抠搜",
-      "name": "🍄抠抠┃搜搜",
+      "key": "seed",
+      "name": "💡聚剧剧┃三盘",
       "type": 3,
-      "api": "csp_KkSsGuard",
+      "api": "csp_SeedhubGuard",
+      "changeable": 0,
+      "ext": "5++kwLhNYm9UrO9wh7Dl7eKamTee4s/5",
       "searchable": 1,
       "quickSearch": 1,
-      "changeable": 0,
-      "ext": {
-        "Cloud-drive": "tvfan/Cloud-drive.txt",
-        "from": "4k|auto"
-      }
-    },
-    {
-      "key": "UC",
-      "name": "🌈优汐┃搜搜",
-      "type": 3,
-      "api": "csp_UuSsGuard",
-      "searchable": 1,
-      "quickSearch": 1,
-      "changeable": 0,
-      "ext": {
-        "Cloud-drive": "tvfan/Cloud-drive.txt",
-        "from": "4k|auto"
+      "indexs": 0,
+      "style": {
+        "type": "list"
       }
     },
     {
@@ -89,6 +77,17 @@
       "name": "📔厂长┃不卡",
       "type": 3,
       "api": "csp_NewCzGuard",
+      "timeout": 15,
+      "playerType": 2,
+      "searchable": 1,
+      "quickSearch": 1,
+      "changeable": 1
+    },
+    {
+      "key": "南瓜",
+      "name": "🎃南瓜┃不卡",
+      "type": 3,
+      "api": "csp_NanGuaGuard",
       "timeout": 15,
       "playerType": 2,
       "searchable": 1,
@@ -396,10 +395,23 @@
       }
     },
     {
-      "key": "PanSso",
-      "name": "🐌盘他┃三盘",
+      "key": "抠搜",
+      "name": "🍄抠抠┃搜搜",
       "type": 3,
-      "api": "csp_PanSsoGuard",
+      "api": "csp_KkSsGuard",
+      "searchable": 1,
+      "quickSearch": 1,
+      "changeable": 0,
+      "ext": {
+        "Cloud-drive": "tvfan/Cloud-drive.txt",
+        "from": "4k|auto"
+      }
+    },
+    {
+      "key": "UC",
+      "name": "🌈优汐┃搜搜",
+      "type": 3,
+      "api": "csp_UuSsGuard",
       "searchable": 1,
       "quickSearch": 1,
       "changeable": 0,
@@ -643,12 +655,19 @@
       "logo": "https://epg.v1.mk/logo/{name}.png"
     },
     {
+      "name": "V6-范明明（需开启V6网络）",
+      "type": 0,
+      "url": "./lib/20250425-868403-298462cec53c48439a5765ceaca3c67f.m3u",
+      "playerType": 2,
+      "logo": "https://11.112114.xyz/logo/{name}.png"
+    },
+    {
       "name": "牛播一",
       "type": 0,
-      "url": "./lib/tv.m3u",
+      "url": "http://127.0.0.1:9978/proxy?do=饭太硬&type=liveList",
       "playerType": 2,
       "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
-      "logo": "https://epg.v1.mk/logo/{name}.png"
+      "logo": "https://11.112114.xyz/logo/{name}.png"
     },
     {
       "name": "平台直播",
