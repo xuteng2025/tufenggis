@@ -649,27 +649,27 @@
     {
       "name": "V4-mursor（卡顿请换源）",
       "type": 0,
-      "url": "./lib/iptv.m3u",
+      "url": "./lib/result.m3u",
       "playerType": 2,
       "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
       "logo": "https://11.112114.xyz/logo/{name}.png",
       "ua": "okHttp/Mod-1.0.1"
     },
     {
-      "name": "百事通",
+      "name": "IPV4福建IPV6",
       "type": 0,
-      "url": "./lib/bst.txt",
+      "url": "./lib/fj.txt",
       "playerType": 1,
       "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
-      "logo": "https://11.112114.xyz/logo/{name}.png"
+      "logo": "https://epg.v1.mk/logo/{name}.png"
     },
     {
-      "name": "tv3",
+      "name": "牛播一",
       "type": 0,
-      "url": "./lib/tv3.txt",
-      "playerType": 1,
+      "url": "./lib/tv.m3u",
+      "playerType": 2,
       "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
-      "logo": "https://11.112114.xyz/logo/{name}.png"
+      "logo": "https://epg.v1.mk/logo/{name}.png"
     },
     {
       "name": "平台直播",
