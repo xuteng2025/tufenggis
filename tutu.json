@@ -656,16 +656,17 @@
       "ua": "okHttp/Mod-1.0.1"
     },
     {
-      "name": "V6-范明明（需开启V6网络）",
+      "name": "百事通",
       "type": 0,
-      "url": "./lib/20250425-868403-298462cec53c48439a5765ceaca3c67f.m3u",
-      "playerType": 2,
+      "url": "./lib/bst.txt",
+      "playerType": 1,
+      "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
       "logo": "https://11.112114.xyz/logo/{name}.png"
     },
     {
-      "name": "IPV4福建IPV6",
+      "name": "tv3",
       "type": 0,
-      "url": "./lib/fj.txt",
+      "url": "./lib/tv3.txt",
       "playerType": 1,
       "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
       "logo": "https://11.112114.xyz/logo/{name}.png"
