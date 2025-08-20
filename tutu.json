@@ -649,7 +649,7 @@
     {
       "name": "测试",
       "type": 0,
-      "url": "./lib/result.m3u",
+      "url": "./lib/migu.txt",
       "playerType": 2,
       "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
       "logo": "https://epg.v1.mk/logo/{name}.png"
