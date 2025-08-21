@@ -4,7 +4,7 @@
   "sites": [
     {
       "key": "豆豆",
-      "name": "全国用咪咕",
+      "name": "看电视用全国咪咕线路",
       "type": 3,
       "api": "csp_DouDouGuard",
       "indexs": 1,
