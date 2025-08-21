@@ -647,9 +647,9 @@
   "logo": "https://cdn.wmpvp.com/steamWeb/B96F868DE45B45D690B5F9F490D0BC60-1745866248445.gif",
   "lives": [
     {
-      "name": "IPV4咪咕IPV6",
+      "name": "IPV4全国IPV6",
       "type": 0,
-      "url": "./lib/migu.txt",
+      "url": "http://106.53.99.30/2025.txt",
       "playerType": 2,
       "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
       "logo": "https://epg.v1.mk/logo/{name}.png"
@@ -663,9 +663,9 @@
       "logo": "https://epg.v1.mk/logo/{name}.png"
     },
     {
-      "name": "IPV4极速IPV6",
+      "name": "IPV4咪咕IPV6",
       "type": 0,
-      "url": "http://106.53.99.30/2025.txt",
+      "url": "./lib/migu.txt",
       "playerType": 2,
       "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
       "logo": "https://epg.v1.mk/logo/{name}.png"
