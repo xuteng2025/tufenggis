@@ -647,7 +647,7 @@
   "logo": "https://cdn.wmpvp.com/steamWeb/B96F868DE45B45D690B5F9F490D0BC60-1745866248445.gif",
   "lives": [
     {
-      "name": "咪咕",
+      "name": "IPV4咪咕IPV6",
       "type": 0,
       "url": "./lib/migu.txt",
       "playerType": 2,
@@ -663,7 +663,7 @@
       "logo": "https://epg.v1.mk/logo/{name}.png"
     },
     {
-      "name": "极速",
+      "name": "IPV4极速IPV6",
       "type": 0,
       "url": "http://106.53.99.30/2025.txt",
       "playerType": 2,
