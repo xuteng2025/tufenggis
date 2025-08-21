@@ -663,9 +663,9 @@
       "logo": "https://epg.v1.mk/logo/{name}.png"
     },
     {
-      "name": "牛播一",
+      "name": "极速",
       "type": 0,
-      "url": "./lib/tv.m3u",
+      "url": "http://106.53.99.30/2025.txt",
       "playerType": 2,
       "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
       "logo": "https://epg.v1.mk/logo/{name}.png"
