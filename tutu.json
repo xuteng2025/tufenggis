@@ -648,7 +648,7 @@
     {
       "name": "IPV4全国IPV6",
       "type": 0,
-      "url": "https://raw.githubusercontent.com/ssili126/tv/refs/heads/main/itvlist.txt",
+      "url": "https://ghfast.top/https://raw.githubusercontent.com/ssili126/tv/refs/heads/main/itvlist.txt",
       "playerType": 2,
       "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}",
       "logo": "https://epg.v1.mk/logo/{name}.png"
