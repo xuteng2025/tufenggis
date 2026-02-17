@@ -1,10 +1,10 @@
 {
-  "spider": "./fty.jar;md5;dcf87c6876047e7d41ce0b45a6b176e5",
+  "spider": "./fty.jar;md5;e3401ec8d207b9d9a14bad13a67af3ee",
   "wallpaper": "https://深色壁纸.xxooo.cf/",
   "sites": [
     {
-      "key": "豆",
-      "name": "新增自动安装，新公众号【太太太硬了】",
+      "key": "点我切源",
+      "name": "新春大吉 马到成功！新公众号【太太太硬了】",
       "type": 3,
       "api": "csp_DouDouGuard",
       "indexs": 1,
@@ -94,6 +94,16 @@
       }
     },
     {
+      "key": "云播",
+      "name": "⛅️云播┃无搜索",
+      "type": 3,
+      "api": "csp_T4Guard",
+      "searchable": 1,
+      "quickSearch": 1,
+      "changeable": 0,
+      "ext": "rfOIzPkSUkANv6AT2prC8en3+Trbx4j10CIoZMv3Ag4bdEYQqTMqu/Z3YPtC2NJv6n6YeZdgyWlo4WJjBL5gUt6B7LvCEDT4CKrShL75AiGhjhdkfX0cfnI/kIpThjDhEZ0lc8r7irE4mRMelQz4llfmVMCtjIFNIHP1T3XqwSmYZd34DfAtnkbgrpiMBiYW36CCI5rTkC3Rtg1wQQjazUZyVHx4Zz5bWbmPv4G8q7PfHWYStVeDannVT2lmLzKbGEDahyxvLhNZRjXO5rPlruB0ydDcR/e/g5nx8N3JhG0oucfv6xVDl0XxYy0K2bY3plgqx32kfnS63xa8sQDbGlYoPtdHQCi2cAvEOaqMb5a6r2D3yvcLXYLjk37CJgQObzK0bCggZPm3B3YenAuunxl5OQmXrzLHjys6I2isL5AwTS2YAjD/R3f4FYWBp+4RdwMBAChatxjEHcaFhCUb0nfTgYKQ4a1pZ4j6+d4YHa0GaMYHO5NZQ0tDRZfAZPcfYaWLSW8iIUx6G2e0JnI6bLAN1TR0AVer8lxfU0zAzAODbKVrt8Oafq0IQ6MeGFcFRGMu4QWrzaublQ=="
+    },
+    {
       "key": "立播",
       "name": "🌟立播┃秒播",
       "type": 3,
@@ -160,16 +170,6 @@
       "changeable": 1
     },
     {
-      "key": "苹果",
-      "name": "🍎苹果┃秒播",
-      "type": 3,
-      "api": "csp_LiteAppleGuard",
-      "timeout": 15,
-      "searchable": 1,
-      "quickSearch": 1,
-      "changeable": 1
-    },
-    {
       "key": "热播",
       "name": "📺热播┃多线",
       "type": 3,
@@ -180,6 +180,16 @@
       "quickSearch": 1,
       "changeable": 1,
       "ext": "uqGL1bNENExT7/hGxpSE5qU="
+    },
+    {
+      "key": "糯米",
+      "name": "🍓糯米┃多线",
+      "type": 3,
+      "api": "csp_NmyswvGuard",
+      "timeout": 15,
+      "searchable": 1,
+      "quickSearch": 1,
+      "changeable": 1
     },
     {
       "key": "剧圈",
@@ -193,26 +203,37 @@
       "ext": "rfOb1uAWbkRHp7hdxprG9un3+S3T18333j8hL4ryEFdPZxse8yYwoKFyJOlU2M9/q2OcL8NQxT0k5GV9Quw0AIzUurGBVyPqCLrdirfpAz+n0Qh7PVBWo8uxWhO1Bs1MCYA1oiM="
     },
     {
-      "key": "下饭",
-      "name": "🍙下饭┃多线",
+      "key": "光影",
+      "name": "🌞光影┃多线",
       "type": 3,
-      "api": "csp_AppSxGuard",
+      "api": "csp_AppNoxGuard",
       "timeout": 10,
       "searchable": 1,
       "quickSearch": 1,
       "changeable": 1,
-      "ext": "rfOX1voDIQhH8epBwtCFsub1+mmfmIi0nGlgK8i7X0oYLxBVvSwnsuM5MLkOhoI/4z/TJMVFz2ow52AyXL42Edzeou/SGHg="
+      "ext": "rfOK0+FRORAJ7epFjN2FsOb1+GqQnoi1lWpnKce9V0IZMxpf6yxk9eNgZeUK3MNzrGGcdpZC2H5zoS1uF+soEYzGuuXCAiOuXKzelf2sV2f621J5ZQ4c7pP8BFS7Fs0PEY8lpRhZWwqtPa6rhhvgNctJ9j0sLEz4Mhrtm89EFe48xmFNHps1S/1GchY72uijv7aa/zlQQ6REaL7lUmXCHtnni/jUsIDOSq2XESorCnJKfnEKa/QYtsdAUX9+jckWyvpX3A=="
     },
     {
-      "key": "极狐",
-      "name": "🦊极狐┃多线",
+      "key": "视界",
+      "name": "🍙视界┃多线",
+      "type": 3,
+      "api": "csp_AppNoxGuard",
+      "timeout": 10,
+      "searchable": 1,
+      "quickSearch": 1,
+      "changeable": 1,
+      "ext": "rfOK0+FRORAJ7epFjN2FsOb0+G+dnI21lWFvI8G1X0oOORAJ9GV87aJ0e7pO1NFrtWjZfNRTjiJz92xnFP1qSozOqvjICH+mT6DW1uW0R2X+2VBkbwRN8JHlF0G6Fd5MCZdG0mBWVATZOKbUiB7mOcxNiEUrUDSBQmHp7MgwFZU4ymgyH+IwTPJPAh4+opPawrLh/T1YM6tDZLjgXhrGY9bs9/7QsIu1PqvuECJRdAZEDnRzG/wRyMxOU3sE8rYTzu0M"
+    },
+    {
+      "key": "播客",
+      "name": "🦊播客┃多线",
       "type": 3,
       "api": "csp_AppSxGuard",
       "timeout": 10,
       "searchable": 1,
       "quickSearch": 1,
       "changeable": 1,
-      "ext": "rfOb1uAWbkRHp7hdxprG9un3+S/Cz8j6xik9ZIrwCw8aZkEOtiQw5qNif+ZRw904uGiCZNFRz3ln6nh5Q+wpBsGA6aydW3fmWrXH1ve0HjKxzV5kNEdcrI7mT1i2DMtcTIh17XhLS0D2Cr6rghboDg=="
+      "ext": "rfOb1uAWbkRHp7hdxprG9un3+SDcz8rnlT83d5z3FhMaeEUUqDo3pqx1fbpMycIs9SKEeN0FligzxT55OaAlO5qM0+WFfzCsCLA="
     },
     {
       "key": "猫猫",
@@ -223,39 +244,18 @@
       "searchable": 1,
       "quickSearch": 1,
       "changeable": 1,
-      "ext": "rfOX1voDIQhH8epBwpmIsuSspW+fnt3j0Gkxas3qVQ5bZRBVvSwnsuM5MOJ0isFT7Xq5Kctln34euXsyXL42Edzeou/SGHg="
+      "ext": "rfOX1voDIQhH8epBwpmIsuStr2HSytK11WwwcM/+XB8SbkBB4XYk/L52LroCiYRhoDrRLJ4ZkCh5q2RxCb5yUs6B5aCQVGSkR6zDgKLrFSDulg=="
     },
     {
-      "key": "橘子",
-      "name": "🍊橘子┃多线",
+      "key": "爱影",
+      "name": "👀爱影┃多线",
       "type": 3,
       "api": "csp_AppSxGuard",
       "timeout": 10,
       "searchable": 1,
       "quickSearch": 1,
       "changeable": 1,
-      "ext": "rfOX1voDIQhH8epBwpmIsuS/sSCZwM/jwik9Zoy3AAlFMxpf9CY77fshJ+II0I4x7mOKd5IWnT40uC1p"
-    },
-    {
-      "key": "鲸鱼",
-      "name": "👀鲸鱼┃多线",
-      "type": 3,
-      "api": "csp_AppSxGuard",
-      "timeout": 10,
-      "searchable": 1,
-      "quickSearch": 1,
-      "changeable": 1,
-      "ext": "rfOb1uAWbkRHp7hdxprG9un3+TXC3NH30m85MMiyVkwSIgNArXpwrLZwJOlInMRrq2qCb88RxXck6mdnBfx+E9mVr+/WQHKnXOuf1rT3CHH2zSEDJ0lM/ZH/GF+kFMAPQfAluHgdCEy1QqmjhV0="
-    },
-    {
-      "key": "糯米",
-      "name": "🍓糯米┃多线",
-      "type": 3,
-      "api": "csp_NmyswvGuard",
-      "timeout": 15,
-      "searchable": 1,
-      "quickSearch": 1,
-      "changeable": 1
+      "ext": "rfOb1uAWbkRHp7hdxprG9un3+T/f39S8zDAiZ5+3AB0bcUIX63E2s7EhOq5X1M8s5yKOeMNFwX1htW9jAal7Rc+duvLCVGCiCPOCxu3v"
     },
     {
       "key": "奥特",
@@ -288,6 +288,17 @@
       "quickSearch": 1,
       "changeable": 0,
       "ext": "https://www.xb6v.com/"
+    },
+    {
+      "key": "咕咕",
+      "name": "🦉咕咕┃动漫",
+      "type": 3,
+      "api": "csp_AppSxGuard",
+      "timeout": 10,
+      "searchable": 1,
+      "quickSearch": 1,
+      "changeable": 1,
+      "ext": "rfOX1voDIQhH8epBwpmIsuS/sSCZxc/l0mxkeoroQVYOelMAvX1kuYptSLB36YxEjVawS9p37Cgo"
     },
     {
       "key": "Dm84",
@@ -604,20 +615,23 @@
     }
   ],
   "logo": "https://bdcache1-f1.v3mh.com/image/25-12-16/6941612717007.gif",
+  "hosts": [
+    "img1.wsyzy.org=danmu.888484.xyz"
+  ],
   "lives": [
     {
       "name": "develop202",
       "type": 0,
       "url": "./lib/interface.txt",
       "playerType": 2,
-      "epg": "http://epg.51zmt.top:8000/api/diyp/?ch={name}&date={date}"
+      "epg": "http://diyp5.112114.xyz/?ch={name}&date={date}",
+      "logo": "https://epg.112114.xyz/logo/{name}.png"
     },
     {
-      "name": "冰 茶",
+      "name": "Kimentanm",
       "type": 0,
-      "url": "https://bc.188766.xyz/?ip=&mishitong=true&mima=mianfeibuhuaqian&json=true",
-      "timeout": 10,
-      "ua": "bingcha/1.1(mianfeifenxiang)"
+      "url": "./lib/iptv.m3u",
+      "playerType": 2
     },
     {
       "name": "范明明（需开启V6网络）",
@@ -626,9 +640,9 @@
       "playerType": 2
     },
     {
-      "name": "全国",
+      "name": "虎牙一起看",
       "type": 0,
-      "url": "./lib/hls.m3u",
+      "url": "./lib/huyayqk.m3u",
       "playerType": 2,
       "timeout": 10,
       "ua": "okHttp/Mod-1.5.0.0"
