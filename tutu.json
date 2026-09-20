@@ -49,6 +49,13 @@
       "quickSearch": 0,
       "changeable": 0
     },
+	{
+      "key": "红果",
+      "name": "红果短剧",
+      "type": 3,
+      "api": "lib/红果短剧能看全集.py",
+      "类型": "影视"
+    },
     {
       "key": "MTV1",
       "name": "🎙️易听音乐┃带歌词",
