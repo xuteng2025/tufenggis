@@ -641,14 +641,9 @@
       "playerType": 2
     },
     {
-      "name": "牛播一",
-      "url": "http://127.0.0.1:9978/proxy?do=cctva",
-      "timeZone": "Asia/Shanghai"
-    },
-    {
-      "name": "Kimentanm",
+      "name": "范明明（需开启V6网络）",
       "type": 0,
-      "url": "./lib/iptv.m3u",
+      "url": "./lib/3d75a78a0fc7ede372c03598d6d10367.m3u",
       "playerType": 2
     },
     {
