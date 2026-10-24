@@ -53,7 +53,7 @@
       "key": "红果",
       "name": "红果短剧",
       "type": 3,
-      "api": "./lib/红果短剧最终版.py",
+      "api": "./lib/红果短剧能看全集.py",
       "类型": "影视"
     },
     {
@@ -643,7 +643,7 @@
     {
       "name": "范明明（需开启V6网络）",
       "type": 0,
-      "url": "./lib/3d75a78a0fc7ede372c03598d6d10367.m3u",
+      "url": "https://v6.gh-proxy.org/https://raw.githubusercontent.com/Supprise0901/TVBox_live/refs/heads/main/live.txt",
       "playerType": 2
     },
     {
