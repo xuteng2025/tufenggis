@@ -868,7 +868,7 @@ _STREAM_CHUNK = 1 << 20
 _STREAM_HEAD_PROBE = 1 << 16
 _STREAM_TTL_SECONDS = 900
 _STREAM_MAX_SESSIONS = 4
-_STREAM_STATE: dict[str, Any] = {"port": 0, "server": None, "sessions": {}}
+_STREAM_STATE: dict[str, Any] = {"port": 0, "server": None, "sessions": {}, "inflight": {}}
 _STREAM_LOCK = threading.RLock()
 
 
@@ -1037,22 +1037,29 @@ class _StreamSession:
     def __init__(
         self,
         url: str,
-        content_key: bytes,
+        content_key: bytes | None,
         total: int,
         moov_start: int,
         moov: bytes,
     ) -> None:
-        if len(content_key) != 16:
-            raise HongguoPluginError("CENC 密钥长度错误")
         self.url = url
         self.content_key = content_key
         self.total = total
         self.moov_start = moov_start
-        self.moov_plain = _rewrite_moov(moov)
         self.moov_end = moov_start + len(moov)
-        self.samples = _sample_table(moov, moov_start)
-        self.offsets = [item[0] for item in self.samples]
         self.created = time.time()
+        if content_key is None:
+            # 网页公开直链本身是明文 MP4，无需解密
+            self.encrypted = False
+            self.moov_plain = moov
+            self.samples: list[tuple[int, int, bytes]] = []
+        else:
+            if len(content_key) != 16:
+                raise HongguoPluginError("CENC 密钥长度错误")
+            self.encrypted = True
+            self.moov_plain = _rewrite_moov(moov)
+            self.samples = _sample_table(moov, moov_start)
+        self.offsets = [item[0] for item in self.samples]
 
     def expired(self) -> bool:
         return time.time() - self.created > _STREAM_TTL_SECONDS
@@ -1092,6 +1099,8 @@ class _StreamSession:
         raw, _ = _range_get(self.url, start, end)
         if not raw:
             raise HongguoPluginError("媒体分片为空")
+        if not self.encrypted:
+            return raw
         buffer = bytearray(raw)
         self._patch(buffer, start)
         return bytes(buffer)
@@ -1105,6 +1114,36 @@ class _StreamSession:
             cursor += len(block)
 
 
+_PUBLIC_URL_CACHE: dict[str, tuple[float, str]] = {}
+_PUBLIC_URL_TTL = 600
+
+
+def _public_video_url(video_id: str) -> str:
+    """网页端公开免费集直链（无需签名，仅 360P，用于接口风控/未就绪时兜底）。"""
+    text = str(video_id or "")
+    if not text.isdigit():
+        return ""
+    now = time.time()
+    cached = _PUBLIC_URL_CACHE.get(text)
+    if cached and now - cached[0] < _PUBLIC_URL_TTL:
+        return cached[1]
+    url = "%s/video/public/%s/360p.mp4" % (SITE, text)
+    try:
+        request = urllib.request.Request(url, headers={"User-Agent": UA, "Range": "bytes=0-0"})
+        with urllib.request.urlopen(request, timeout=15, context=_SSL_CTX) as response:
+            if getattr(response, "status", 200) in (200, 206):
+                if len(_PUBLIC_URL_CACHE) >= 500:
+                    _PUBLIC_URL_CACHE.clear()
+                _PUBLIC_URL_CACHE[text] = (now, url)
+                return url
+    except Exception:
+        pass
+    if len(_PUBLIC_URL_CACHE) >= 500:
+        _PUBLIC_URL_CACHE.clear()
+    _PUBLIC_URL_CACHE[text] = (now, "")
+    return ""
+
+
 def _stream_session(video_id: str, config: Mapping[str, Any], quality: str = "1080") -> "_StreamSession":
     quality = quality if quality in _QUALITY_LINE_NAME_TO_Q else "1080"
     cache_key = "%s|%s" % (video_id, quality)
@@ -1113,28 +1152,50 @@ def _stream_session(video_id: str, config: Mapping[str, Any], quality: str = "10
         for key in [key for key, item in sessions.items() if item.expired()]:
             sessions.pop(key, None)
         session = sessions.get(cache_key)
-    if session is not None:
-        return session
-    model = _video_model(video_id, config)
-    _, item = _select_quality(_video_list_from_model(model), quality)
-    url = _media_url(item)
-    spade = _spade_value(item)
-    if not url or not spade:
-        raise HongguoPluginError("播放模型缺少地址或密钥材料")
-    key_seed = _key_seed_from_model(model)
-    if key_seed:
+        if session is not None:
+            return session
+        # 同一集并发到达的 Range 请求只允许一个真正建会话/调接口，其余等待
+        flight = _STREAM_STATE["inflight"].get(cache_key)
+        if flight is None:
+            flight = threading.Lock()
+            _STREAM_STATE["inflight"][cache_key] = flight
+    with flight:
+        with _STREAM_LOCK:
+            session = _STREAM_STATE["sessions"].get(cache_key)
+            if session is not None:
+                return session
         try:
-            url = _decrypt_spade_url(url, key_seed)
-        except HongguoPluginError:
-            pass
-    total, moov_start, moov = _fetch_moov(url)
-    session = _StreamSession(url, derive_content_key(spade), total, moov_start, moov)
-    with _STREAM_LOCK:
-        sessions = _STREAM_STATE["sessions"]
-        while len(sessions) >= _STREAM_MAX_SESSIONS:
-            sessions.pop(next(iter(sessions)), None)
-        sessions[cache_key] = session
-    return session
+            try:
+                model = _video_model(video_id, config)
+                _, item = _select_quality(_video_list_from_model(model), quality)
+                url = _media_url(item)
+                spade = _spade_value(item)
+                if not url or not spade:
+                    raise HongguoPluginError("播放模型缺少地址或密钥材料")
+                key_seed = _key_seed_from_model(model)
+                if key_seed:
+                    try:
+                        url = _decrypt_spade_url(url, key_seed)
+                    except HongguoPluginError:
+                        pass
+                content_key: bytes | None = derive_content_key(spade)
+            except Exception as model_error:
+                # 接口频控/未就绪时，免费集改用网页公开直链（仅 360P）
+                url = _public_video_url(video_id)
+                if not url:
+                    raise model_error
+                content_key = None
+            total, moov_start, moov = _fetch_moov(url)
+            session = _StreamSession(url, content_key, total, moov_start, moov)
+            with _STREAM_LOCK:
+                sessions = _STREAM_STATE["sessions"]
+                while len(sessions) >= _STREAM_MAX_SESSIONS:
+                    sessions.pop(next(iter(sessions)), None)
+                sessions[cache_key] = session
+            return session
+        finally:
+            with _STREAM_LOCK:
+                _STREAM_STATE["inflight"].pop(cache_key, None)
 
 
 _RANGE_UNSATISFIABLE = "unsatisfiable"
@@ -3359,7 +3420,48 @@ def _device_config(config: Mapping[str, Any]) -> dict[str, str]:
         "ua": APP_UA,
     }
 
+_MODEL_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
+_MODEL_CACHE_LOCK = threading.Lock()
+_MODEL_CACHE_TTL = 1800
+_MODEL_MIN_INTERVAL = 2.0
+_MODEL_LAST_CALL = [0.0]
+_MODEL_CALL_LOCK = threading.Lock()
+# 请求失败（接口返回空体）后的短暂否定缓存：播放器会自动重试同一集，
+# 这里拦住 15 秒内的重复请求，避免越失败越发请求、越容易被风控。
+_MODEL_FAIL_CACHE: dict[str, float] = {}
+_MODEL_FAIL_LOCK = threading.Lock()
+_MODEL_FAIL_TTL = 15.0
+_MODEL_RETRY_ATTEMPTS = 3
+# 同一集的并发请求（播放器多路 Range）只允许一个真正打接口，其余等结果
+_MODEL_INFLIGHT: dict[str, threading.Lock] = {}
+_MODEL_INFLIGHT_LOCK = threading.Lock()
+
+
 def _video_model(video_id: str, config: Mapping[str, Any]) -> dict[str, Any]:
+    video_id = str(video_id)
+    with _MODEL_INFLIGHT_LOCK:
+        inflight = _MODEL_INFLIGHT.get(video_id)
+        if inflight is None:
+            inflight = threading.Lock()
+            _MODEL_INFLIGHT[video_id] = inflight
+    with inflight:
+        try:
+            return _video_model_fetch(video_id, config)
+        finally:
+            with _MODEL_INFLIGHT_LOCK:
+                _MODEL_INFLIGHT.pop(video_id, None)
+
+
+def _video_model_fetch(video_id: str, config: Mapping[str, Any]) -> dict[str, Any]:
+    video_id = str(video_id)
+    with _MODEL_CACHE_LOCK:
+        cached = _MODEL_CACHE.get(video_id)
+        if cached and time.time() - cached[0] < _MODEL_CACHE_TTL:
+            return dict(cached[1])
+    with _MODEL_FAIL_LOCK:
+        failed_at = _MODEL_FAIL_CACHE.get(video_id)
+        if failed_at and time.time() - failed_at < _MODEL_FAIL_TTL:
+            raise HongguoPluginError("播放接口刚刚拒绝了请求，请稍后重试")
     devices = _device_config(config)
     params = {
         "iid": devices["install_id"],
@@ -3416,23 +3518,52 @@ def _video_model(video_id: str, config: Mapping[str, Any]) -> dict[str, Any]:
     }
     if devices.get("cookie"):
         request_headers["Cookie"] = devices["cookie"]
-    signed_headers, signed_url = _core_sixgod(
-        VIDEO_URL,
-        params,
-        devices,
-        payload,
-        request_headers,
-    )
-    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    request = urllib.request.Request(
-        signed_url,
-        data=body,
-        headers=signed_headers,
-        method="POST",
-    )
-    with urllib.request.urlopen(request, timeout=30, context=_SSL_CTX) as response:
-        raw_body = response.read()
-    response_data = _json_response(raw_body)
+    response_data = None
+    last_error: Exception | None = None
+    for attempt in range(_MODEL_RETRY_ATTEMPTS):
+        # 全局限速：播放器会并发发起多个 Range 请求，避免瞬间打爆接口触发风控
+        with _MODEL_CALL_LOCK:
+            wait = _MODEL_MIN_INTERVAL - (time.time() - _MODEL_LAST_CALL[0])
+            if wait > 0:
+                time.sleep(wait)
+            _MODEL_LAST_CALL[0] = time.time()
+        try:
+            signed_headers, signed_url = _core_sixgod(
+                VIDEO_URL,
+                params,
+                devices,
+                payload,
+                request_headers,
+            )
+            body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+            request = urllib.request.Request(
+                signed_url,
+                data=body,
+                headers=signed_headers,
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=30, context=_SSL_CTX) as response:
+                raw_body = response.read()
+            if not raw_body.strip():
+                # 官方接口风控时返回 200 + 空体（不是 JSON），视为可重试
+                raise HongguoPluginError("播放接口返回空响应")
+            candidate = _json_response(raw_body)
+            # 新集未就绪时 data 可能为空：当作可重试；data 有内容但缺模型则不再重试
+            if not candidate.get("data"):
+                raise HongguoPluginError("播放接口未返回视频模型")
+            response_data = candidate
+            break
+        except Exception as exc:
+            last_error = exc
+            if attempt < _MODEL_RETRY_ATTEMPTS - 1:
+                # 短抖动退避：接口空响应是瞬时的，长等待并不会提高成功率
+                time.sleep(0.8 + attempt * 0.8 + random.random() * 0.6)
+    if response_data is None:
+        with _MODEL_FAIL_LOCK:
+            while len(_MODEL_FAIL_CACHE) >= 200:
+                _MODEL_FAIL_CACHE.pop(next(iter(_MODEL_FAIL_CACHE)), None)
+            _MODEL_FAIL_CACHE[video_id] = time.time()
+        raise HongguoPluginError("播放接口请求失败: %s" % last_error)
     data = response_data.get("data") or {}
     if not isinstance(data, Mapping):
         raise HongguoPluginError("video_model 数据为空")
@@ -3457,7 +3588,12 @@ def _video_model(video_id: str, config: Mapping[str, Any]) -> dict[str, Any]:
             raise HongguoPluginError("video_model JSON 无效") from exc
     if not isinstance(raw_model, Mapping):
         raise HongguoPluginError("video_model 为空")
-    return dict(raw_model)
+    result = dict(raw_model)
+    with _MODEL_CACHE_LOCK:
+        while len(_MODEL_CACHE) >= 200:
+            _MODEL_CACHE.pop(next(iter(_MODEL_CACHE)), None)
+        _MODEL_CACHE[video_id] = (time.time(), result)
+    return dict(result)
 
 def _video_list_from_model(model: Mapping[str, Any]) -> Any:
     for key in ("video_list", "dynamic_video_list"):
@@ -4297,14 +4433,23 @@ class Spider(_BaseSpider):
             query = urllib.parse.parse_qs(parsed.query)
             param = {key: values[0] for key, values in query.items() if values}
         param = param or {}
-        vid = str(
-            param.get("vid")
-            or param.get("id")
-            or param.get("mediaId")
-            or ""
-        ).strip()
-        if not vid or not str(vid).isdigit():
+        user_q = str(param.get("q") or param.get("quality") or "").strip()
+        vid = str(param.get("vid") or param.get("mediaId") or "").strip()
+        # 有的壳直接把剧集 token 塞在 id 里（hg-episode-v1:<q>:<vid>）
+        token_value = str(param.get("id") or "").strip()
+        if token_value:
+            token_q, token_vid = _split_episode_token(token_value)
+            if token_vid.isdigit():
+                vid = token_vid
+                if not user_q:
+                    user_q = token_q
+        if not vid.isdigit():
+            vid = ""
+        if not vid:
             for _key, value in param.items():
+                # 设备标识也是纯数字，不能当成剧集 vid
+                if _key in ("did", "iid", "device_id", "install_id"):
+                    continue
                 text = str(value or "").strip()
                 if text.isdigit() and len(text) >= 10:
                     vid = text
@@ -4317,7 +4462,6 @@ class Spider(_BaseSpider):
                 "device_id": str(param.get("did") or self.device_id or ""),
                 "install_id": str(param.get("iid") or self.install_id or ""),
             }
-            user_q = str(param.get("q") or param.get("quality") or "").strip()
             # 有原生 AES：优先 1080；纯 Python AES 很慢：先 720 保证能播，再尝试更高
             if user_q:
                 order = [user_q, "1080", "720", "480", "360"]
@@ -4339,7 +4483,17 @@ class Spider(_BaseSpider):
                 if cached:
                     return [200, "video/mp4", cached]
 
-            model = _video_model(vid, cfg)
+            try:
+                model = _video_model(vid, cfg)
+            except Exception as model_error:
+                # 接口频控/新集未就绪时，免费集回落到网页公开直链（仅 360P）
+                public_url = _public_video_url(vid)
+                if not public_url:
+                    raise model_error
+                body = _http_get_bytes(public_url, timeout=60)
+                if len(body) < 64 or b"ftyp" not in body[:64]:
+                    raise model_error
+                return [200, "video/mp4", body]
             rows = _video_list_from_model(model)
             if not rows:
                 return [500, "text/plain; charset=utf-8", b"empty video list"]
@@ -4403,6 +4557,10 @@ class Spider(_BaseSpider):
 
             msg = "hg localProxy failed: %s" % last_err
             return [500, "text/plain; charset=utf-8", msg.encode("utf-8")]
+        except HongguoPluginError as exc:
+            # 官方接口风控/新集未就绪，锁定集无法降级播放，给出可读提示
+            msg = "红果播放接口暂时拒绝请求：%s（请稍后重新播放）" % exc
+            return [503, "text/plain; charset=utf-8", msg.encode("utf-8")]
         except Exception as exc:
             msg = "hg localProxy failed: %s\n%s" % (exc, traceback.format_exc())
             return [500, "text/plain; charset=utf-8", msg.encode("utf-8")]
