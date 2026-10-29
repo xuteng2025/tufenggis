@@ -3423,14 +3423,16 @@ def _device_config(config: Mapping[str, Any]) -> dict[str, str]:
 _MODEL_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 _MODEL_CACHE_LOCK = threading.Lock()
 _MODEL_CACHE_TTL = 1800
-_MODEL_MIN_INTERVAL = 2.0
+_MODEL_MIN_INTERVAL = 0.5
 _MODEL_LAST_CALL = [0.0]
 _MODEL_CALL_LOCK = threading.Lock()
 # 请求失败（接口返回空体）后的短暂否定缓存：播放器会自动重试同一集，
-# 这里拦住 15 秒内的重复请求，避免越失败越发请求、越容易被风控。
+# 这里拦住一段时间内的重复请求，避免越失败越发请求、越容易被风控。
 _MODEL_FAIL_CACHE: dict[str, float] = {}
 _MODEL_FAIL_LOCK = threading.Lock()
-_MODEL_FAIL_TTL = 15.0
+_MODEL_FAIL_TTL = 60.0
+# 官方接口在风控时对整批请求直接回 200 空体（实测连续 60 次全空，且独立实现同样如此），
+# 重试收益很低，因此只做少量重试，失败尽快返回可读提示，避免播放器长时间黑屏等待。
 _MODEL_RETRY_ATTEMPTS = 3
 # 同一集的并发请求（播放器多路 Range）只允许一个真正打接口，其余等结果
 _MODEL_INFLIGHT: dict[str, threading.Lock] = {}
@@ -3557,7 +3559,7 @@ def _video_model_fetch(video_id: str, config: Mapping[str, Any]) -> dict[str, An
             last_error = exc
             if attempt < _MODEL_RETRY_ATTEMPTS - 1:
                 # 短抖动退避：接口空响应是瞬时的，长等待并不会提高成功率
-                time.sleep(0.8 + attempt * 0.8 + random.random() * 0.6)
+                time.sleep(0.6 + attempt * 0.5 + random.random() * 0.5)
     if response_data is None:
         with _MODEL_FAIL_LOCK:
             while len(_MODEL_FAIL_CACHE) >= 200:
@@ -4483,17 +4485,23 @@ class Spider(_BaseSpider):
                 if cached:
                     return [200, "video/mp4", cached]
 
-            try:
-                model = _video_model(vid, cfg)
-            except Exception as model_error:
-                # 接口频控/新集未就绪时，免费集回落到网页公开直链（仅 360P）
-                public_url = _public_video_url(vid)
-                if not public_url:
-                    raise model_error
-                body = _http_get_bytes(public_url, timeout=60)
-                if len(body) < 64 or b"ftyp" not in body[:64]:
-                    raise model_error
-                return [200, "video/mp4", body]
+            # 免费集网页公开直链（无需签名，仅 360P）：优先于官方接口。
+            # 官方接口当前对大量请求直接回 200 空体，先走直链可让免费集瞬间起播，
+            # 也避免为了免费集先去等接口重试（纯 Python AES 环境下尤其明显）。
+            public_url = _public_video_url(vid)
+            if public_url:
+                try:
+                    body = _http_get_bytes(public_url, timeout=60)
+                    if len(body) >= 64 and b"ftyp" in body[:64]:
+                        try:
+                            _hg_cache_put(vid, "360", body)
+                        except Exception:
+                            pass
+                        return [200, "video/mp4", body]
+                except Exception:
+                    pass
+
+            model = _video_model(vid, cfg)
             rows = _video_list_from_model(model)
             if not rows:
                 return [500, "text/plain; charset=utf-8", b"empty video list"]
@@ -4558,8 +4566,11 @@ class Spider(_BaseSpider):
             msg = "hg localProxy failed: %s" % last_err
             return [500, "text/plain; charset=utf-8", msg.encode("utf-8")]
         except HongguoPluginError as exc:
-            # 官方接口风控/新集未就绪，锁定集无法降级播放，给出可读提示
-            msg = "红果播放接口暂时拒绝请求：%s（请稍后重新播放）" % exc
+            # 免费集已由网页直链兜底；走到这里基本都是锁定集，且官方接口拒绝了请求
+            msg = (
+                "该集为锁定集：红果官方播放接口拒绝了请求（%s）。"
+                "免费集可直接播放，锁定集请稍后重试或使用红果App观看。" % exc
+            )
             return [503, "text/plain; charset=utf-8", msg.encode("utf-8")]
         except Exception as exc:
             msg = "hg localProxy failed: %s\n%s" % (exc, traceback.format_exc())
