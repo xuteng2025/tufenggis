@@ -4,9 +4,6 @@
 #       /category/<线路>/<题材>?page=N，可真实筛选并翻页（旧 topic=cate_xxx、gender 参数官网已废弃）
 # 播放：全部集数一律走纯 Python 播放引擎（app 播放接口 + 本地解密代理），不再依赖 Android dex 签名服务，
 #       因此详情页不再出现 [锁]，任意集数都可直接播放
-# 反爬/校验预设：设备身份（device_id/install_id）首次自动生成并持久化后固定复用，请求带完整 App 头、
-#       install_id Cookie 与 store 区域标记；上游域名多路兜底；取流失败 20 秒内快速失败并提示。
-#       如某网络下仍被校验拦截，可在源配置 extend 里填 {"device_id":"…","install_id":"…","x_tt_dt":"…"}，会持久生效。
 from __future__ import annotations
 import base64
 import binascii
@@ -3323,78 +3320,52 @@ def _core_sixgod(url: str, params: Mapping[str, Any], devices: Mapping[str, Any]
     return result_headers, encrypted_url
 
 
-# ---- 设备身份预设：首次自动生成并持久化，之后固定不变（频繁换身份最容易被风控） ----
-_HG_PROFILE_FILE = os.path.join(tempfile.gettempdir(), "hongguo_device_profile.json")
-_HG_DEVICE: dict[str, str] = {}
-_VIDEO_HOSTS = (
-    "https://api5-normal-sinfonlineb.fqnovel.com",
-    "https://api5-normal-lf.fqnovel.com",
-    "https://api16-normal-c-useast1a.fqnovel.com",
-)
-_VIDEO_PATH = "/novel/player/multi_video_model/v1/"
-_VIDEO_HOST_OK = ""
-_VIDEO_FAIL_TS = 0.0          # 最近一次取流失败时间
-_VIDEO_FAIL_COOLDOWN = 20     # 失败后 20 秒内直接快速失败，避免每集都长时间重试
-
-
-def _load_device_profile() -> dict:
-    try:
-        with open(_HG_PROFILE_FILE, "r", encoding="utf-8") as fh:
-            data = json.load(fh)
-        return data if isinstance(data, Mapping) else {}
-    except Exception:
-        return {}
-
-
-def _save_device_profile(profile: Mapping[str, Any]) -> None:
-    try:
-        with open(_HG_PROFILE_FILE + ".tmp", "w", encoding="utf-8") as fh:
-            json.dump(dict(profile), fh)
-        os.replace(_HG_PROFILE_FILE + ".tmp", _HG_PROFILE_FILE)
-    except Exception:
-        pass
-
-
-def _new_device_id() -> str:
-    return str(random.randint(10 ** 18, 10 ** 19 - 1))
-
-
-def _install_device(profile: Mapping[str, Any]) -> dict:
-    global _HG_DEVICE
-    profile = dict(profile or {})
-    _HG_DEVICE = {
-        "device_id": _text(profile.get("device_id")),
-        "install_id": _text(profile.get("install_id")),
-        "x_tt_dt": _text(profile.get("x_tt_dt")),
-        "sec_device_token": _text(profile.get("sec_device_token")),
-    }
-    return _HG_DEVICE
-
-
 def _device_config(config: Mapping[str, Any]) -> dict[str, str]:
-    merged = dict(_HG_DEVICE)
-    for key, value in dict(config or {}).items():
-        if value not in (None, ""):
-            merged[key] = value
-    device_id = _text(merged.get("device_id"))
-    install_id = _text(merged.get("install_id"))
+    device_id = _text(config.get("device_id"))
+    install_id = _text(config.get("install_id"))
     if not device_id or not install_id:
         raise HongguoPluginError("缺少红果 device_id/install_id 配置")
     return {
         "device_id": device_id, "iid": install_id, "install_id": install_id,
         "device_brand": "Redmi", "device_model": "25053RT47C", "device_type": "25053RT47C",
         "device_manufacturer": "Xiaomi", "os_version": "16", "version_name": "7.1.3.32",
-        "x_tt_dt": _text(merged.get("x_tt_dt")),
-        "sec_device_token": _text(merged.get("sec_device_token")),
-        "device_sec_device_token": _text(merged.get("sec_device_token")),
-        "license_id": _text(merged.get("license_id")) or "1588093228",
-        # 与真实 App 一致：请求全程携带安装 id 与 store 区域，避免被判定为爬虫
-        "cookie": "install_id=%s; store-region=cn; store-region-src=did" % install_id,
+        "x_tt_dt": _text(config.get("x_tt_dt")),
+        "sec_device_token": _text(config.get("sec_device_token")),
+        "device_sec_device_token": _text(config.get("device_sec_device_token")),
         "ua": APP_UA,
     }
 
 def _video_model(video_id: str, config: Mapping[str, Any]) -> dict[str, Any]:
-    global _VIDEO_HOST_OK, _VIDEO_FAIL_TS
+    devices = _device_config(config)
+    params = {
+        "iid": devices["install_id"],
+        "device_id": devices["device_id"],
+        "ac": "wifi",
+        "channel": "update_64",
+        "aid": "8662",
+        "app_name": "novelread",
+        "version_code": "71332",
+        "version_name": "7.1.3.32",
+        "device_platform": "android",
+        "os": "android",
+        "ssmix": "a",
+        "device_type": "25053RT47C",
+        "device_brand": "Redmi",
+        "language": "zh",
+        "os_api": "36",
+        "os_version": "16",
+        "manifest_version_code": "71332",
+        "resolution": "1280*2772",
+        "dpi": "520",
+        "update_version_code": "71332",
+        "host_abi": "arm64-v8a",
+        "dragon_device_type": "phone",
+        "pv_player": "71332",
+        "compliance_status": "0",
+        "need_personal_recommend": "1",
+        "player_so_load": "1",
+        "is_android_pad_screen": "0",
+    }
     payload = {
         "biz_param": {
             "detail_page_version": 0,
@@ -3408,88 +3379,34 @@ def _video_model(video_id: str, config: Mapping[str, Any]) -> dict[str, Any]:
         },
         "mixed_video_id_map": {"1004": [video_id]},
     }
-
-    def _params_for(dev: Mapping[str, Any]) -> dict[str, str]:
-        return {
-            "iid": dev["install_id"],
-            "device_id": dev["device_id"],
-            "ac": "wifi",
-            "channel": "update_64",
-            "aid": "8662",
-            "app_name": "novelread",
-            "version_code": "71332",
-            "version_name": "7.1.3.32",
-            "device_platform": "android",
-            "os": "android",
-            "ssmix": "a",
-            "device_type": "25053RT47C",
-            "device_brand": "Redmi",
-            "language": "zh",
-            "os_api": "36",
-            "os_version": "16",
-            "manifest_version_code": "71332",
-            "resolution": "1280*2772",
-            "dpi": "520",
-            "update_version_code": "71332",
-            "host_abi": "arm64-v8a",
-            "dragon_device_type": "phone",
-            "pv_player": "71332",
-            "compliance_status": "0",
-            "need_personal_recommend": "1",
-            "player_so_load": "1",
-            "is_android_pad_screen": "0",
-        }
-
-    def _try_all_hosts(dev: Mapping[str, Any]) -> dict:
-        """依次尝试多个上游域名；记录可用域名，后续优先复用。"""
-        global _VIDEO_HOST_OK
-        hosts = list(_VIDEO_HOSTS)
-        if _VIDEO_HOST_OK and _VIDEO_HOST_OK in hosts:
-            hosts.remove(_VIDEO_HOST_OK)
-            hosts.insert(0, _VIDEO_HOST_OK)
-        last_error: Any = None
-        for host in hosts:
-            request_headers = {
-                "User-Agent": APP_UA,
-                "Accept": "application/json; charset=utf-8,application/x-protobuf",
-                "Content-Type": "application/json; charset=UTF-8",
-                "x-xs-from-web": "0",
-                "x-ss-req-ticket": str(int(time.time() * 1000)),
-                "x-tt-request-tag": "t=0;n=0",
-                "sdk-version": "2",
-                "passport-sdk-version": "50561",
-                "x-vc-bdturing-sdk-version": "3.7.2.cn",
-                "x-tt-store-region": "cn",
-                "x-tt-store-region-src": "did",
-            }
-            if dev.get("cookie"):
-                request_headers["Cookie"] = dev["cookie"]
-            try:
-                signed_headers, signed_url = _core_sixgod(
-                    host + _VIDEO_PATH, _params_for(dev), dev, payload, request_headers
-                )
-                body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-                response = requests.post(signed_url, headers=signed_headers, data=body, timeout=30)
-                data = _json_response(response)
-                if isinstance(data, Mapping) and data:
-                    _VIDEO_HOST_OK = host
-                    return data
-                last_error = HongguoPluginError("上游空响应（疑似风控拦截）")
-            except Exception as exc:
-                last_error = exc
-        if last_error:
-            raise last_error
-        raise HongguoPluginError("video_model 请求失败")
-
-    devices = _device_config(config)
-    if time.time() < _VIDEO_FAIL_TS + _VIDEO_FAIL_COOLDOWN:
-        raise HongguoPluginError("上游校验未通过，%d 秒后可重试" % int(_VIDEO_FAIL_TS + _VIDEO_FAIL_COOLDOWN - time.time() + 1))
-    try:
-        response_data = _try_all_hosts(devices)
-        _VIDEO_FAIL_TS = 0.0
-    except Exception:
-        _VIDEO_FAIL_TS = time.time()
-        raise
+    request_headers = {
+        "User-Agent": APP_UA,
+        "Accept": "application/json; charset=utf-8,application/x-protobuf",
+        "Content-Type": "application/json; charset=UTF-8",
+        "x-xs-from-web": "0",
+        "x-ss-req-ticket": str(int(time.time() * 1000)),
+        "x-tt-request-tag": "t=0;n=0",
+        "sdk-version": "2",
+        "passport-sdk-version": "50561",
+        "x-vc-bdturing-sdk-version": "3.7.2.cn",
+    }
+    if devices.get("cookie"):
+        request_headers["Cookie"] = devices["cookie"]
+    signed_headers, signed_url = _core_sixgod(
+        VIDEO_URL,
+        params,
+        devices,
+        payload,
+        request_headers,
+    )
+    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    response = requests.post(
+        signed_url,
+        headers=signed_headers,
+        data=body,
+        timeout=30,
+    )
+    response_data = _json_response(response)
     data = response_data.get("data") or {}
     if not isinstance(data, Mapping):
         raise HongguoPluginError("video_model 数据为空")
@@ -3864,17 +3781,8 @@ def _route_loader(url: str) -> dict:
 
 class Spider(_BaseSpider):
     def __init__(self):
-        # 设备身份预设：首次生成后写入临时目录并固定复用，避免每次启动换身份触发风控
-        profile = _load_device_profile()
-        if not _text(profile.get("device_id")) or not _text(profile.get("install_id")):
-            profile = {
-                "device_id": _new_device_id(), "install_id": _new_device_id(),
-                "x_tt_dt": "", "sec_device_token": "",
-            }
-            _save_device_profile(profile)
-        _install_device(profile)
-        self.device_id = _HG_DEVICE["device_id"]
-        self.install_id = _HG_DEVICE["install_id"]
+        self.device_id = str(random.randint(10**17, 10**18 - 1))
+        self.install_id = str(random.randint(10**17, 10**18 - 1))
 
     def getName(self):
         return "红果短剧"
@@ -3902,35 +3810,11 @@ class Spider(_BaseSpider):
         return ""
 
     def init(self, extend=""):
+        # 每次源实例使用随机合法设备标识；不依赖用户私有配置。
         try:
             _hg_cache_cleanup(False)
         except Exception:
             pass
-        # 源配置可直接预设设备身份（device_id/install_id/x_tt_dt/sec_device_token），
-        # 形如 {"device_id":"...","install_id":"..."} 或 device_id=...&install_id=...
-        cfg = {}
-        raw = str(extend or "").strip()
-        if raw:
-            try:
-                if raw.startswith("{"):
-                    cfg = json.loads(raw)
-                else:
-                    cfg = {k: (v[0] if v else "") for k, v in parse_qs(raw).items()}
-            except Exception:
-                cfg = {}
-        if isinstance(cfg, Mapping):
-            overrides = {
-                key: _text(cfg.get(key))
-                for key in ("device_id", "install_id", "x_tt_dt", "sec_device_token")
-                if _text(cfg.get(key))
-            }
-            if overrides:
-                profile = _load_device_profile()
-                profile.update(overrides)
-                _save_device_profile(profile)
-                _install_device(profile)
-                self.device_id = _HG_DEVICE["device_id"] or self.device_id
-                self.install_id = _HG_DEVICE["install_id"] or self.install_id
         return None
 
     def destroy(self):
@@ -4151,6 +4035,7 @@ class Spider(_BaseSpider):
 
     def localProxy(self, param):
         """壳本地代理：优先读缓存；无原生 AES 时避免一上来就解 1080 整集导致超时失败。"""
+        import traceback
         param = param or {}
         vid = str(
             param.get("vid")
@@ -4266,6 +4151,6 @@ class Spider(_BaseSpider):
             msg = "hg localProxy failed: %s" % last_err
             return [500, "text/plain; charset=utf-8", msg.encode("utf-8")]
         except Exception as exc:
-            msg = "红果取流失败（上游校验或网络异常）：%s" % exc
+            msg = "hg localProxy failed: %s\n%s" % (exc, traceback.format_exc())
             return [500, "text/plain; charset=utf-8", msg.encode("utf-8")]
 
