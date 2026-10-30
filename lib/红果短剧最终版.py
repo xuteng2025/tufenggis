@@ -429,6 +429,22 @@ def _hg_cache_put(vid: str, quality: str, data: bytes) -> None:
             pass
 
 
+_EPISODE_LOCKS: dict[str, Any] = {}
+_EPISODE_LOCKS_GUARD = threading.Lock()
+
+
+def _episode_lock(vid: str) -> threading.Lock:
+    """同一集的并发代理请求共用一把锁：只下载解密一次，后来的请求直接吃缓存。"""
+    with _EPISODE_LOCKS_GUARD:
+        lock = _EPISODE_LOCKS.get(vid)
+        if lock is None:
+            if len(_EPISODE_LOCKS) > 16:
+                _EPISODE_LOCKS.clear()
+            lock = threading.Lock()
+            _EPISODE_LOCKS[vid] = lock
+        return lock
+
+
 def _aes_is_fast() -> bool:
     return AES_BACKEND in ("cryptography", "pycryptodome")
 
@@ -1129,27 +1145,6 @@ def _stream_session(video_id: str, config: Mapping[str, Any], quality: str = "10
                 sessions.pop(next(iter(sessions)), None)
             sessions[cache_key] = session
         return session
-
-
-_STREAM_PREFETCHING: dict[str, bool] = {}
-
-
-def _stream_prefetch(video_id: str, device_id: str, install_id: str, quality: str) -> None:
-    """切集时后台预建会话（取流 + moov），播放器首个请求少等一次取流，避免偶发超时报错。"""
-    quality = quality if quality in _QUALITY_LINE_NAME_TO_Q else "1080"
-    key = "%s|%s" % (video_id, quality)
-    with _STREAM_LOCK:
-        session = _STREAM_STATE["sessions"].get(key)
-        if key in _STREAM_PREFETCHING or (session is not None and not session.expired()):
-            return
-        _STREAM_PREFETCHING[key] = True
-    try:
-        _stream_session(video_id, {"device_id": device_id, "install_id": install_id}, quality)
-    except Exception:
-        pass
-    finally:
-        with _STREAM_LOCK:
-            _STREAM_PREFETCHING.pop(key, None)
 
 
 _RANGE_UNSATISFIABLE = "unsatisfiable"
@@ -3882,8 +3877,6 @@ class Spider(_BaseSpider):
     def __init__(self):
         self.device_id = str(random.randint(10**17, 10**18 - 1))
         self.install_id = str(random.randint(10**17, 10**18 - 1))
-        # 有些壳不支持播放 127.0.0.1 地址时，可在源配置里写 proxy=1 强制走壳代理
-        self.force_proxy = False
 
     def getName(self):
         return "红果短剧"
@@ -3916,8 +3909,6 @@ class Spider(_BaseSpider):
             _hg_cache_cleanup(False)
         except Exception:
             pass
-        if str(extend or "").strip().lower() in ("proxy=1", "1", "proxy"):
-            self.force_proxy = True
         return None
 
     def destroy(self):
@@ -4073,26 +4064,20 @@ class Spider(_BaseSpider):
                 "url": SITE + "/",
                 "header": {"User-Agent": UA},
             }
-        # 已解密缓存 → 走壳代理秒开；未缓存 → 走本机 Range 流边播边解密。
-        # 根因：整集下载+解密常超过壳端代理超时，表现为“上一集正常、下一集播放错误、重播偶尔成功”。
-        cached_q = ""
-        for cand in (q, "1080", "720", "480", "360"):
-            if _hg_cache_peek(vid, cand):
-                cached_q = cand
-                break
-        # OK影视 / 多数壳：getProxyUrl 通常已带 do=py，不要覆盖 do
+        # OK影视 / 多数壳：必须走 getProxyUrl（通常已带 do=py），不要覆盖 do
         proxy = ""
         try:
             if hasattr(self, "getProxyUrl"):
                 proxy = (self.getProxyUrl() or "").strip()
         except Exception:
             proxy = ""
-        if proxy and cached_q:
+        if proxy:
             sep = "&" if "?" in proxy else "?"
+            # 保留壳自带的 do=py，只追加业务参数与清晰度线路
             url = proxy + sep + urlencode(
                 {
                     "vid": vid,
-                    "q": cached_q,
+                    "q": q,
                     "hg": "cenc",
                     "did": self.device_id or "",
                     "iid": self.install_id or "",
@@ -4108,21 +4093,12 @@ class Spider(_BaseSpider):
                     "Referer": "https://novel.snssdk.com/",
                 },
             }
-        # 本机 Range 流：立即可播，不用等整集解码
+        # 备用：本机 Range 流（FongMi 更友好）
         try:
             port = _start_stream_server()
         except Exception:
             port = 0
-        if port and not getattr(self, "force_proxy", False):
-            # 先把本集会话在后台建好，播放器真正来取流时通常已经就绪
-            try:
-                threading.Thread(
-                    target=_stream_prefetch,
-                    args=(vid, self.device_id or "", self.install_id or "", q),
-                    daemon=True,
-                ).start()
-            except Exception:
-                pass
+        if port:
             query = urlencode(
                 {
                     "vid": vid,
@@ -4137,27 +4113,6 @@ class Spider(_BaseSpider):
                 "playUrl": "",
                 "url": "http://127.0.0.1:%d/hg.mp4?%s" % (port, query),
                 "header": {"User-Agent": UA},
-            }
-        if proxy:
-            sep = "&" if "?" in proxy else "?"
-            url = proxy + sep + urlencode(
-                {
-                    "vid": vid,
-                    "q": q,
-                    "hg": "cenc",
-                    "did": self.device_id or "",
-                    "iid": self.install_id or "",
-                }
-            )
-            return {
-                "parse": 0,
-                "jx": 0,
-                "playUrl": "",
-                "url": url,
-                "header": {
-                    "User-Agent": MEDIA_UA,
-                    "Referer": "https://novel.snssdk.com/",
-                },
             }
         return {
             "parse": 1,
@@ -4191,6 +4146,10 @@ class Spider(_BaseSpider):
         if not vid:
             return [400, "text/plain; charset=utf-8", b"missing vid"]
 
+        # 播放器切集时会对同一集并发发多次请求；串行化后只下载解密一次，
+        # 避免重复下载把内存/带宽占满而“播放错误”。
+        episode_lock = _episode_lock(vid)
+        episode_lock.acquire()
         try:
             cfg = {
                 "device_id": str(param.get("did") or self.device_id or ""),
@@ -4292,4 +4251,9 @@ class Spider(_BaseSpider):
         except Exception as exc:
             msg = "hg localProxy failed: %s\n%s" % (exc, traceback.format_exc())
             return [500, "text/plain; charset=utf-8", msg.encode("utf-8")]
+        finally:
+            try:
+                episode_lock.release()
+            except Exception:
+                pass
 
